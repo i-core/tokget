@@ -1,0 +1,27 @@
+# Copyright (c) JSC iCore.
+
+# This source code is licensed under the MIT license found in the
+# LICENSE file in the root directory of this source tree.
+
+run:
+  test: true
+  silent: true
+linters-settings:
+  govet:
+    check-shadowing: true
+linters:
+  disable-all: true
+  enable:
+    - deadcode
+    - gofmt
+    - goimports
+    - golint
+    - varcheck
+    - structcheck
+    - megacheck
+    - ineffassign
+    - interfacer
+    - unconvert
+    - govet
+issues:
+  exclude-use-default: false

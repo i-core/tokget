@@ -1,0 +1,91 @@
+language: go
+
+go:
+  - 1.12.x
+
+services:
+  - docker
+
+dist: trusty
+
+addons:
+  chrome: stable
+
+env:
+  global:
+    - CGO_ENABLED=0
+    - GO111MODULE=on
+    - GOPROXY=https://proxy.golang.org
+
+cache:
+  directories:
+    - "$GOPATH/pkg/mod"
+    - "$GOPATH/bin"
+
+before_install:
+  - google-chrome-stable --headless --disable-gpu --remote-debugging-port=9222 > /dev/null 2>&1 &
+
+install: curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s -- -b $(go env GOPATH)/bin v1.16.0
+
+script:
+  - env TOKGET_TEST_REMOTE_CHROME=http://localhost:9222 go test -v -coverprofile=coverage.txt ./...
+  - golangci-lint -v run
+  - |
+    set -e
+    for dist in linux/386 linux/amd64 windows/amd64 darwin/amd64
+    do
+      os=`echo $dist | cut -d'/' -f1`
+      arch=`echo $dist | cut -d'/' -f2`
+      env GOOS=$os GOARCH=$arch go build -o bin/${os}_${arch}/tokget -ldflags "-w -s -X main.version=$TRAVIS_TAG" ./cmd/tokget
+      if [[ "$os" = "windows" ]]; then
+        (cd bin/${os}_${arch} && zip -r ../tokget_${os}_${arch}.zip tokget)
+      else
+        tar cvzf bin/tokget_${os}_${arch}.tar.gz -C ./bin/${os}_${arch} tokget
+      fi
+    done
+    (cd bin && sha256sum *.{tar.gz,zip} > tokget_checksums.txt)
+  - |
+    set -e
+    docker build --build-arg GOPROXY --build-arg VERSION=$TRAVIS_TAG -t "icoreru/tokget:$TRAVIS_COMMIT" .
+    if [ -n "$TRAVIS_TAG" ]; then
+      docker tag "icoreru/tokget:$TRAVIS_COMMIT" "icoreru/tokget:$TRAVIS_TAG"
+      docker tag "icoreru/tokget:$TRAVIS_COMMIT" "icoreru/tokget:latest"
+    fi
+
+after_success:
+  - bash <(curl -s https://codecov.io/bash)
+
+before_deploy:
+  - |
+    if [ -n "$TRAVIS_TAG" ]; then
+      docker login -u "$DOCKER_USERNAME" -p "$DOCKER_PASSWORD"
+    fi
+
+deploy:
+  - provider: releases
+    api_key:
+      secure: S0Szvennjwd0vA2TL7N/bWUwHYw0XaSPy8UQTUCzJ9bhSJYykCEmAXMfMA8K0A/lt1q7jDOaK3e94aPPniXNcIoRQM0bpGJ5Rzkm/jnvdhg4C1Nd5e/oevNoZl8HoC+GV7NvNywG17yiMm7jmqp8hg2ceFzTe3gOKZyyFzAmiHNlRYy+0ng2VSfe7IGk3gny6yTrLAvo+b8y2SHHdBj6kWfQNd5ezFyysXDSQciYJXzbGthh6OXNoTNpR0ES7bBiAE37pqy35+j76GyBNE8nxidvns3Y5q9XBhApZHM00sb07o4lrD5iAAdN8RkwreNMNreJiwjLmBGN2FP4MZkuB5PGf6Z4s6Qc9k05taWSUlFc8UmWBFpldg+gDPjbdw/1qSZhZgGYGVPWnyNT8WkX5qsRV9zPJlHYW7l1jEyUgY7+ByfznIGu3U//UKd0ThzG3N6wk/0nJ0PagUPS7lfMLkWarK19uSdGrL9LrilbM8u0LhGSau/tr48VsG6O38o4LBc8mXs+UvLUD0m8pdPu5p1hvEiKrO/CaWHmNPk5L8I3coFEYWfjmm7ub+JIVti2JzclrhK7yVLyqYiiJ82SEKOaNxtNpfyKiSTKtivQSa0LUgUxIfMht2H9l8vTGMbmIgDQYJVVyHKmMuV0w3MWtrqRklxwXATEGLhUZDWGMaY=
+    file:
+      - bin/tokget_linux_386.tar.gz
+      - bin/tokget_linux_amd64.tar.gz
+      - bin/tokget_windows_amd64.zip
+      - bin/tokget_darwin_amd64.tar.gz
+      - bin/tokget_checksums.txt
+    skip_cleanup: true
+    on:
+      tags: true
+      condition: $TRAVIS_OS_NAME = linux
+
+  - provider: script
+    skip_cleanup: true
+    script: docker push "icoreru/tokget:$TRAVIS_TAG"
+    on:
+      tags: true
+      condition: $TRAVIS_OS_NAME = linux
+
+  - provider: script
+    skip_cleanup: true
+    script: docker push "icoreru/tokget:latest"
+    on:
+      tags: true
+      condition: $TRAVIS_OS_NAME = linux
