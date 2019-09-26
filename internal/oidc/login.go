@@ -25,7 +25,7 @@ type LoginConfig struct {
 	Endpoint      string // an OpenID Connect endpoint
 	ClientID      string // a client's ID
 	RedirectURI   string // a client's redirect uri
-	Scopes        string // an OpenID Connec scopes
+	Scopes        string // OpenID Connec scopes
 	Username      string // a user's name
 	Password      string // a user's password
 	PasswordStdin bool   // a user's password from stdin
