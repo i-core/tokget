@@ -25,6 +25,7 @@ type LoginConfig struct {
 	Endpoint      string // an OpenID Connect endpoint
 	ClientID      string // a client's ID
 	RedirectURI   string // a client's redirect uri
+	Scopes        string // OpenID Connect scopes
 	Username      string // a user's name
 	Password      string // a user's password
 	PasswordStdin bool   // a user's password from stdin
@@ -80,6 +81,11 @@ func Login(ctx context.Context, chromeURL string, cnf *LoginConfig) (*LoginData,
 			param: cnf.RedirectURI,
 			kind:  errors.KindRedirectURIMissed,
 			msg:   "client's redirect uri is missed",
+		},
+		{
+			param: cnf.Scopes,
+			kind:  errors.KindScopesMissed,
+			msg:   "OpenID Connect scopes are missed",
 		},
 		{
 			param: cnf.Username,
@@ -146,7 +152,7 @@ func Login(ctx context.Context, chromeURL string, cnf *LoginConfig) (*LoginData,
 	//
 	// Step 3. Navigate to the OpenID Connect Provider's login page.
 	//
-	loginStartURL := buildLoginURL(endpoint, cnf.ClientID, cnf.RedirectURI)
+	loginStartURL := buildLoginURL(endpoint, cnf.ClientID, cnf.RedirectURI, cnf.Scopes)
 	debugger.Debugf("Navigate to the login page %q\n", loginStartURL)
 	if err = chrome.Navigate(ctx, loginStartURL); err != nil {
 		return nil, errors.Wrap(err, "navigate to the login page")
@@ -247,7 +253,7 @@ func Login(ctx context.Context, chromeURL string, cnf *LoginConfig) (*LoginData,
 	return nil, errors.New(errors.KindLoginError, "unexpected error page %q\n%s", postLoginURL, errPageContent)
 }
 
-func buildLoginURL(endpoint *url.URL, clientID, redirectURI string) string {
+func buildLoginURL(endpoint *url.URL, clientID, redirectURI, scopes string) string {
 	ref, err := url.Parse("/oauth2/auth")
 	if err != nil {
 		panic(errors.Wrap(err, "make login url"))
@@ -256,7 +262,7 @@ func buildLoginURL(endpoint *url.URL, clientID, redirectURI string) string {
 	query := loginStartURL.Query()
 	query.Set("client_id", clientID)
 	query.Set("response_type", "id_token token")
-	query.Set("scope", "openid profile email")
+	query.Set("scope", scopes)
 	query.Set("redirect_uri", redirectURI)
 	query.Set("state", "12345678")
 	query.Set("nonce", "87654321")

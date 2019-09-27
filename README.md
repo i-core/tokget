@@ -31,18 +31,18 @@ go install ./...
 From Docker:
 
 ```bash
-docker pull icoreru/tokget:v1.0.0
+docker pull icoreru/tokget:v1.1.0
 ```
 
 Download binary:
 
 ```bash
 
-curl -Lo /tmp/tokget_linux_amd64.tar.gz 'https://github.com/i-core/tokget/releases/download/v1.0.0/tokget_linux_amd64.tar.gz'
+curl -Lo /tmp/tokget_linux_amd64.tar.gz 'https://github.com/i-core/tokget/releases/download/v1.1.0/tokget_linux_amd64.tar.gz'
 tar -xzf /tmp/tokget_linux_amd64.tar.gz -C /usr/local/bin
 
 # In alpine linux (as it does not come with curl by default)
-wget -P /tmp 'https://github.com/i-core/tokget/releases/download/v1.0.0/tokget_linux_amd64.tar.gz'
+wget -P /tmp 'https://github.com/i-core/tokget/releases/download/v1.1.0/tokget_linux_amd64.tar.gz'
 tar -xzf /tmp/tokget_linux_amd64.tar.gz -C /usr/local/bin
 ```
 
@@ -61,7 +61,7 @@ Run `tokget -h` to see a list of available commands.
 In terminal:
 
 ```bash
-tokget login -e https://openid-connect-provider -c client-id -u username --pwd-std
+tokget login -e https://openid-connect-provider -c <client's ID> -r <client's redirect URL> -s openid,profile,email -u username --pwd-std
 ```
 
 **Note** Google Chrome must be in `$PATH`.
@@ -70,7 +70,7 @@ Via Docker:
 
 
 ```bash
-docker run --name tokget --rm -it icoreru/tokget:v1.0.0 login -e https://openid-connect-provider -c client-id -u username -pwd-stdin
+docker run --name tokget --rm -it icoreru/tokget:v1.1.0 login -e https://openid-connect-provider -c <client ID> -r <client's redirect URL> -s openid,profile,email -u username -pwd-stdin
 ```
 
 **Note** Image `icoreru/tokget` already contains Google Chrome so you don't need to run Google Chrome manually.
@@ -86,6 +86,8 @@ tokget --remote-chrome http://localhost:9222 login  \
         --submit-button "#submit"                   \
         --error-message "#error"                    \
         -e https://openid-connect-provider          \
+        -r <client's redirect URL>                  \
+        -s openid,profile,email                     \
         -c client-id                                \
         -u username                                 \
         -p password
@@ -106,7 +108,7 @@ Via Docker:
 
 
 ```bash
-docker run --name tokget --rm -it icoreru/tokget:v1.0.0 logout -e https://openid-connect-provider  -t id_token
+docker run --name tokget --rm -it icoreru/tokget:v1.1.0 logout -e https://openid-connect-provider  -t id_token
 ```
 
 ### Remote Google Chrome

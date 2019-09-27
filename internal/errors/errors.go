@@ -25,6 +25,8 @@ const (
 	KindClientIDMissed Kind = "client_id_is_missed"
 	// KindRedirectURIMissed is a kind of an error that happens when OpenID Connect client's redirect URI is not specified.
 	KindRedirectURIMissed Kind = "redirect_uri_is_missed"
+	// KindScopesMissed is a kind of an error that happens when OpenID Connect scopes are not specified.
+	KindScopesMissed Kind = "scopes_are_missed"
 	// KindIDTokenMissed is a kind of an error that happens when ID token is not specified.
 	KindIDTokenMissed Kind = "id_token_is_missed"
 	// KindUsernameMissed is a kind of an error that happens when a username is not specified.

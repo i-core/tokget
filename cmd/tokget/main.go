@@ -12,6 +12,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/i-core/tokget/internal/errors"
 	"github.com/i-core/tokget/internal/log"
@@ -25,6 +26,7 @@ func main() {
 	var (
 		verboseLogin  bool
 		verboseLogout bool
+		scopes        string
 	)
 
 	loginCnf := &oidc.LoginConfig{}
@@ -32,6 +34,7 @@ func main() {
 	loginCmd.StringVar(&loginCnf.Endpoint, "e", "", "an OpenID Connect endpoint")
 	loginCmd.StringVar(&loginCnf.ClientID, "c", "", "an OpenID Connect client ID")
 	loginCmd.StringVar(&loginCnf.RedirectURI, "r", "http://localhost:3000", "an OpenID Connect client's redirect uri")
+	loginCmd.StringVar(&scopes, "s", "openid,profile,email", "OpenID Connect scopes")
 	loginCmd.StringVar(&loginCnf.Username, "u", "", "a user's name")
 	loginCmd.StringVar(&loginCnf.Password, "p", "", "a user's password")
 	loginCmd.BoolVar(&loginCnf.PasswordStdin, "pwd-stdin", false, "a user's password from stdin")
@@ -75,6 +78,8 @@ func main() {
 			args = args[2:]
 		case loginCmd.Name():
 			loginCmd.Parse(args[1:])
+
+			loginCnf.Scopes = strings.ReplaceAll(scopes, ",", " ")
 
 			ctx := context.Background()
 			if verboseLogin {

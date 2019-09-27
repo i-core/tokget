@@ -43,6 +43,7 @@ func TestLogin(t *testing.T) {
 	testCnf := &LoginConfig{
 		ClientID:      "test-client",
 		RedirectURI:   "http://localhost:9000/auth-callback",
+		Scopes:        "openid profile email",
 		Username:      "foo",
 		Password:      "bar",
 		UsernameField: "#user",
@@ -104,6 +105,21 @@ func TestLogin(t *testing.T) {
 			wantErr: errors.New(errors.KindRedirectURIMissed),
 		},
 		{
+			name: "scopes are missed",
+			endpoints: []endpoint{
+				{
+					path:   "/oauth2/auth",
+					status: http.StatusOK,
+					html:   "<html><body></body></html>",
+				},
+			},
+			cnf: &LoginConfig{
+				ClientID:    "test-client",
+				RedirectURI: "http://localhost:9000/auth-callback",
+			},
+			wantErr: errors.New(errors.KindScopesMissed),
+		},
+		{
 			name: "username is missed",
 			endpoints: []endpoint{
 				{
@@ -115,6 +131,7 @@ func TestLogin(t *testing.T) {
 			cnf: &LoginConfig{
 				ClientID:    "test-client",
 				RedirectURI: "http://localhost:9000/auth-callback",
+				Scopes:      "openid profile email",
 			},
 			wantErr: errors.New(errors.KindUsernameMissed),
 		},
@@ -130,6 +147,7 @@ func TestLogin(t *testing.T) {
 			cnf: &LoginConfig{
 				ClientID:    "test-client",
 				RedirectURI: "http://localhost:9000/auth-callback",
+				Scopes:      "openid profile email",
 				Username:    "foo",
 				Password:    "bar",
 			},
@@ -147,6 +165,7 @@ func TestLogin(t *testing.T) {
 			cnf: &LoginConfig{
 				ClientID:      "test-client",
 				RedirectURI:   "http://localhost:9000/auth-callback",
+				Scopes:        "openid profile email",
 				Username:      "foo",
 				Password:      "bar",
 				UsernameField: "#user",
@@ -165,6 +184,7 @@ func TestLogin(t *testing.T) {
 			cnf: &LoginConfig{
 				ClientID:      "test-client",
 				RedirectURI:   "http://localhost:9000/auth-callback",
+				Scopes:        "openid profile email",
 				Username:      "foo",
 				Password:      "bar",
 				UsernameField: "#user",
@@ -184,6 +204,7 @@ func TestLogin(t *testing.T) {
 			cnf: &LoginConfig{
 				ClientID:      "test-client",
 				RedirectURI:   "http://localhost:9000/auth-callback",
+				Scopes:        "openid profile email",
 				Username:      "foo",
 				Password:      "bar",
 				UsernameField: "#user",
@@ -209,6 +230,7 @@ func TestLogin(t *testing.T) {
 			cnf: &LoginConfig{
 				ClientID:      "test-client",
 				RedirectURI:   "http://localhost:9000/auth-callback",
+				Scopes:        "openid profile email",
 				Username:      "foo",
 				Password:      "bar",
 				UsernameField: "#user",
@@ -368,6 +390,7 @@ func TestLogin(t *testing.T) {
 			cnf: &LoginConfig{
 				ClientID:      "test-client",
 				RedirectURI:   "http://localhost:9000/auth-callback",
+				Scopes:        "openid profile email",
 				Username:      "foo",
 				Password:      "bar",
 				PasswordStdin: true,
