@@ -2,10 +2,11 @@
 
 [![GoDoc][doc-img]][doc] [![Build Status][build-img]][build] [![codecov][codecov-img]][codecov] [![Go Report Card][goreport-img]][goreport]
 
-`tokget` is a CLI tool that allows to get a user's access token and ID token by [the OpenID Connect protocol][oidc-spec-core].
+`tokget` is a tool that allows getting a user's access token and ID token by [the OpenID Connect protocol][oidc-spec-core].
 
 **Features**
 
+- works as a CLI tool or a web server;
 - authenticates a user without interaction between the browser and user;
 - supports arbitrary structure of the login page;
 - logs a user out by canceling an ID token.
@@ -31,18 +32,18 @@ go install ./...
 From Docker:
 
 ```bash
-docker pull icoreru/tokget:v1.1.0
+docker pull icoreru/tokget:v1.2.0
 ```
 
 Download binary:
 
 ```bash
 
-curl -Lo /tmp/tokget_linux_amd64.tar.gz 'https://github.com/i-core/tokget/releases/download/v1.1.0/tokget_linux_amd64.tar.gz'
+curl -Lo /tmp/tokget_linux_amd64.tar.gz 'https://github.com/i-core/tokget/releases/download/v1.2.0/tokget_linux_amd64.tar.gz'
 tar -xzf /tmp/tokget_linux_amd64.tar.gz -C /usr/local/bin
 
 # In alpine linux (as it does not come with curl by default)
-wget -P /tmp 'https://github.com/i-core/tokget/releases/download/v1.1.0/tokget_linux_amd64.tar.gz'
+wget -P /tmp 'https://github.com/i-core/tokget/releases/download/v1.2.0/tokget_linux_amd64.tar.gz'
 tar -xzf /tmp/tokget_linux_amd64.tar.gz -C /usr/local/bin
 ```
 
@@ -70,7 +71,7 @@ Via Docker:
 
 
 ```bash
-docker run --name tokget --rm -it icoreru/tokget:v1.1.0 login -e https://openid-connect-provider -c <client ID> -r <client's redirect URL> -s openid,profile,email -u username -pwd-stdin
+docker run --name tokget --rm -it icoreru/tokget:v1.2.0 login -e https://openid-connect-provider -c <client ID> -r <client's redirect URL> -s openid,profile,email -u username -pwd-stdin
 ```
 
 **Note** Image `icoreru/tokget` already contains Google Chrome so you don't need to run Google Chrome manually.
@@ -108,13 +109,90 @@ Via Docker:
 
 
 ```bash
-docker run --name tokget --rm -it icoreru/tokget:v1.1.0 logout -e https://openid-connect-provider  -t id_token
+docker run --name tokget --rm -it icoreru/tokget:v1.2.0 logout -e https://openid-connect-provider  -t id_token
+```
+
+### Serve
+
+The command `serve` starts a web server. The web server has endpoints for logging in and out:
+
+In the terminal:
+
+```bash
+tokget serve
+```
+
+Via Docker:
+
+
+```bash
+docker run --name tokget --rm -it -p 8080:8080 icoreru/tokget:v1.2.0 serve
+```
+
+After the web server started you can get a user's access token and ID token by sending a request to endpoint `/login`:
+
+```bash
+curl -X POST -H "Content-Type: application/json" -d '{"endpoint":"https://openid-connect-provider","clientId":"client ID","redirectUri":"redirect uri","scopes":"openid profile email","username":"user name","password":"user password"}' http://localhost:8080/login
+```
+
+A request's body must conforms the next JSON schema:
+
+```yaml
+type: object
+properties:
+    endpoint:
+        type: string
+    clientId:
+        type: string
+    redirectUri:
+        type: string
+    scopes:
+        type: string
+    username:
+        type: string
+    password:
+        type: string
+    usernameField:
+        type: string
+    passwordField:
+        type: string
+    submitButton:
+        type: string
+    errorMessage:
+        type: string
+required:
+    - endpoint
+    - clientId
+    - username
+    - password
+}
+```
+
+And you can log a user out by sending a request to endpoint `/logout`:
+
+```bash
+curl -X POST -H "Content-Type: application/json" -d '{"endpoint": "https://openid-connect-provider","idToken": "ID token"}' http://localhost:8080/logout
+```
+
+A request's body must conforms the next JSON schema:
+
+```yaml
+type: object
+properties:
+    endpoint:
+        type: string
+    idToken:
+        type: string
+required:
+    - endpoint
+    - idToken
+}
 ```
 
 ### Remote Google Chrome
 
 By default `tokget` starts a new Google Chrome process. But you can use an existed Google Chrome process.
-This Google Chrome process should be run with enabled debugger, for example:
+This Google Chrome process should be run with an enabled debugger, for example:
 
 ```bash
 chrome --no-sandbox --remote-debugging-address=0.0.0.0 --remote-debugging-port=9222

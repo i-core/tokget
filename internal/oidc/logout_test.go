@@ -149,10 +149,7 @@ func TestLogout(t *testing.T) {
 					cnf.Endpoint = u.String()
 				}
 			}
-			ctx := context.Background()
-			if verbose {
-				ctx = log.WithDebugger(ctx, log.VerboseDebugger)
-			}
+			ctx := log.WithLogger(context.Background(), verbose)
 			err := Logout(ctx, remoteChromeURL, cnf)
 
 			if tc.wantErr != nil {

@@ -9,48 +9,58 @@ package log
 import (
 	"context"
 	"fmt"
+
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 type contextKey struct{}
 
 var ctxKey = contextKey{}
 
-// Debugger is a logger that prints debug information.
-type Debugger struct {
-	enable bool
-}
-
-// Debugln formats using the default formats for its operands and print to standard output if enabled.
-func (d *Debugger) Debugln(args ...interface{}) {
-	if d.enable {
-		fmt.Println(args...)
+// WithLogger returns a new context with a zap.Logger.
+func WithLogger(ctx context.Context, verbose bool) context.Context {
+	logger := zap.NewNop()
+	if verbose {
+		logger = newConsoleLogger()
 	}
+	return context.WithValue(ctx, ctxKey, logger)
 }
 
-// Debugf formats according to a format specifier and writes to standard output if enabled.
-func (d *Debugger) Debugf(format string, args ...interface{}) {
-	if d.enable {
-		fmt.Printf(format, args...)
+func newConsoleLogger() *zap.Logger {
+	cnf := zap.Config{
+		Level:       zap.NewAtomicLevelAt(zap.DebugLevel),
+		Development: true,
+		Encoding:    "console",
+		EncoderConfig: zapcore.EncoderConfig{
+			TimeKey:        "",
+			LevelKey:       "",
+			NameKey:        "",
+			CallerKey:      "",
+			MessageKey:     "M",
+			StacktraceKey:  "",
+			LineEnding:     zapcore.DefaultLineEnding,
+			EncodeLevel:    zapcore.CapitalLevelEncoder,
+			EncodeTime:     zapcore.ISO8601TimeEncoder,
+			EncodeDuration: zapcore.StringDurationEncoder,
+			EncodeCaller:   zapcore.ShortCallerEncoder,
+		},
+		OutputPaths:      []string{"stderr"},
+		ErrorOutputPaths: []string{"stderr"},
 	}
+	logger, err := cnf.Build()
+	if err != nil {
+		panic(fmt.Sprintf("failed to create logger: %s", err))
+	}
+	return logger
 }
 
-var (
-	silentDebugger = &Debugger{enable: false}
-	// VerboseDebugger is a Debugger that allowed prints messages to standard output.
-	VerboseDebugger = &Debugger{enable: true}
-)
-
-// WithDebugger returns a new context with a Debugger.
-func WithDebugger(ctx context.Context, l *Debugger) context.Context {
-	return context.WithValue(ctx, ctxKey, l)
-}
-
-// DebuggerFromContext returns a Debugger stored in a context.
-// If the context does not contain a Debugger the function returns a silent Debugger.
-func DebuggerFromContext(ctx context.Context) *Debugger {
+// LoggerFromContext returns a zap.Logger stored in a context.
+// If the context does not contain a zap.Logger the function returns a silent zap.Logger.
+func LoggerFromContext(ctx context.Context) *zap.Logger {
 	l := ctx.Value(ctxKey)
 	if l == nil {
-		return silentDebugger
+		return zap.NewNop()
 	}
-	return l.(*Debugger)
+	return l.(*zap.Logger)
 }

@@ -371,37 +371,6 @@ func TestLogin(t *testing.T) {
 			wantAccToken: "access_token_value",
 			wantIDToken:  "id_token_value",
 		},
-		{
-			name: "password from stdin",
-			endpoints: []endpoint{
-				{
-					path:      "/oauth2/auth",
-					wantQuery: testQuery,
-					status:    http.StatusOK,
-					html:      htmlForm("/handle-auth"),
-				},
-				{
-					path:     "/handle-auth",
-					status:   http.StatusPermanentRedirect,
-					redirect: "http://localhost:3000#access_token=access_token_value&id_token=id_token_value",
-					wantBody: map[string]interface{}{"user": "foo", "pass": "bar"},
-				},
-			},
-			cnf: &LoginConfig{
-				ClientID:      "test-client",
-				RedirectURI:   "http://localhost:9000/auth-callback",
-				Scopes:        "openid profile email",
-				Username:      "foo",
-				Password:      "bar",
-				PasswordStdin: true,
-				UsernameField: "#user",
-				PasswordField: "#pass",
-				SubmitButton:  "#submit",
-				ErrorMessage:  "#error",
-			},
-			wantAccToken: "access_token_value",
-			wantIDToken:  "id_token_value",
-		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -478,16 +447,8 @@ func TestLogin(t *testing.T) {
 					cnf.Endpoint = u.String()
 				}
 			}
-			if cnf.PasswordStdin {
-				v := pwdFromStdin
-				pwdFromStdin = func() (string, error) { return cnf.Password, nil }
-				defer func() { pwdFromStdin = v }()
-			}
 
-			ctx := context.Background()
-			if verbose {
-				ctx = log.WithDebugger(ctx, log.VerboseDebugger)
-			}
+			ctx := log.WithLogger(context.Background(), verbose)
 			got, err := Login(ctx, remoteChromeURL, cnf)
 
 			if tc.wantErr != nil {

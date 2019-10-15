@@ -17,8 +17,8 @@ import (
 
 // LogoutConfig is a configuration of the logout process.
 type LogoutConfig struct {
-	Endpoint string // an OpenID Connect endpoint
-	IDToken  string // an ID token
+	Endpoint string `json:"endpoint"` // an OpenID Connect endpoint
+	IDToken  string `json:"idToken"`  // an ID token
 }
 
 // Logout logs a user out and revoke the specified ID token.
@@ -55,15 +55,15 @@ func Logout(ctx context.Context, chromeURL string, cnf *LogoutConfig) error {
 	// Step 3. Navigate to the OpenID Connect Provider's logout page, and process result.
 	//
 	logoutURL := buildLogoutURL(endpoint, cnf.IDToken)
-	debugger := log.DebuggerFromContext(ctx)
-	debugger.Debugf("Navigate to the logout page %q\n", logoutURL)
+	logger := log.LoggerFromContext(ctx).Sugar()
+	logger.Debugf("Navigate to the logout page %q\n", logoutURL)
 	if err = chrome.Navigate(ctx, logoutURL); err != nil {
 		return errors.Wrap(err, "navigate to the logout page")
 	}
 	if err = extractOIDCError(navHistory.Last()); err != nil {
 		return err
 	}
-	debugger.Debugln(`Logged out`)
+	logger.Debug(`Logged out`)
 	return nil
 }
 

@@ -8,7 +8,6 @@ package oidc
 
 import (
 	"context"
-	"fmt"
 	"net/url"
 	"strings"
 	"time"
@@ -17,22 +16,20 @@ import (
 	"github.com/i-core/tokget/internal/chrome"
 	"github.com/i-core/tokget/internal/errors"
 	"github.com/i-core/tokget/internal/log"
-	"golang.org/x/crypto/ssh/terminal"
 )
 
 // LoginConfig is a configuration of the login process.
 type LoginConfig struct {
-	Endpoint      string // an OpenID Connect endpoint
-	ClientID      string // a client's ID
-	RedirectURI   string // a client's redirect uri
-	Scopes        string // OpenID Connect scopes
-	Username      string // a user's name
-	Password      string // a user's password
-	PasswordStdin bool   // a user's password from stdin
-	UsernameField string // a CSS selector of the username field on the login form
-	PasswordField string // a CSS selector of the password field on the login form
-	SubmitButton  string // a CSS selector of the submit button on the login form
-	ErrorMessage  string // a CSS selector of an error message on the login form
+	Endpoint      string `json:"endpoint"`      // an OpenID Connect endpoint
+	ClientID      string `json:"clientId"`      // a client's ID
+	RedirectURI   string `json:"redirectUri"`   // a client's redirect uri
+	Scopes        string `json:"scopes"`        // OpenID Connect scopes
+	Username      string `json:"username"`      // a user's name
+	Password      string `json:"password"`      // a user's password
+	UsernameField string `json:"usernameField"` // a CSS selector of the username field on the login form
+	PasswordField string `json:"passwordField"` // a CSS selector of the password field on the login form
+	SubmitButton  string `json:"submitButton"`  // a CSS selector of the submit button on the login form
+	ErrorMessage  string `json:"errorMessage"`  // a CSS selector of an error message on the login form
 }
 
 // LoginData is a successful result of the login process.
@@ -41,23 +38,11 @@ type LoginData struct {
 	IDToken     string `json:"id_token"`
 }
 
-var pwdFromStdin = defaultPwdFromStdin
-
-// defaultPwdFromStdin reads a password, without echo, from the stdin.
-func defaultPwdFromStdin() (string, error) {
-	fmt.Println("Enter password: ")
-	b, err := terminal.ReadPassword(0)
-	if err != nil {
-		return "", err
-	}
-	return string(b), nil
-}
-
 // Login authenticates a user by opening the login page of an OpenID Connect Provider,
 // and emulating user's actions to fill the authentication parameters and clicking the login button.
 // The function returns a struct that contains an access token an ID token of the authenticated user.
 func Login(ctx context.Context, chromeURL string, cnf *LoginConfig) (*LoginData, error) {
-	debugger := log.DebuggerFromContext(ctx)
+	logger := log.LoggerFromContext(ctx).Sugar()
 
 	//
 	// Step 1. Validate input parameters, and request a user for a password if it is not defined.
@@ -124,14 +109,6 @@ func Login(ctx context.Context, chromeURL string, cnf *LoginConfig) (*LoginData,
 		return nil, errors.New(errors.KindEndpointInvalid, "OpenID Connect endpoint has an invalid value")
 	}
 
-	password := cnf.Password
-	if cnf.PasswordStdin {
-		password, err = pwdFromStdin()
-		if err != nil {
-			return nil, err
-		}
-	}
-
 	//
 	// Step 2. Initialize Chrome connection and open a new tab.
 	//
@@ -140,7 +117,7 @@ func Login(ctx context.Context, chromeURL string, cnf *LoginConfig) (*LoginData,
 		return nil, errors.Wrap(err, "connect to chrome")
 	}
 	defer func() {
-		debugger.Debugln("Disconnect Chrome")
+		logger.Debug("Disconnect Chrome")
 		cancelBrowser()
 	}()
 
@@ -153,7 +130,7 @@ func Login(ctx context.Context, chromeURL string, cnf *LoginConfig) (*LoginData,
 	// Step 3. Navigate to the OpenID Connect Provider's login page.
 	//
 	loginStartURL := buildLoginURL(endpoint, cnf.ClientID, cnf.RedirectURI, cnf.Scopes)
-	debugger.Debugf("Navigate to the login page %q\n", loginStartURL)
+	logger.Debugf("Navigate to the login page %q\n", loginStartURL)
 	if err = chrome.Navigate(ctx, loginStartURL); err != nil {
 		return nil, errors.Wrap(err, "navigate to the login page")
 	}
@@ -164,13 +141,13 @@ func Login(ctx context.Context, chromeURL string, cnf *LoginConfig) (*LoginData,
 	if err = chromedp.Run(ctx, chromedp.OuterHTML("html", &loginPageContent)); err != nil {
 		return nil, errors.Wrap(err, "get the login page's content")
 	}
-	debugger.Debugf("The login page is loaded:\n\n%s\n\n", loginPageContent)
+	logger.Debugf("The login page is loaded:\n\n%s\n\n", loginPageContent)
 
 	//
 	// Step 4. Validate the login form.
 	//
 	// We expect that the login form contains the username field, password field and submit button.
-	debugger.Debugln("Fill the login form")
+	logger.Debug("Fill the login form")
 	formHasElement := func(name, sel string, kind errors.Kind) error {
 		has, hasErr := chrome.HasElement(ctx, sel)
 		if hasErr != nil {
@@ -197,8 +174,8 @@ func Login(ctx context.Context, chromeURL string, cnf *LoginConfig) (*LoginData,
 	if err = chromedp.Run(ctx, chromedp.SendKeys(cnf.UsernameField, cnf.Username)); err != nil {
 		return nil, errors.Wrap(err, "fill the username field")
 	}
-	if password != "" {
-		if err = chromedp.Run(ctx, chromedp.SendKeys(cnf.PasswordField, password)); err != nil {
+	if cnf.Password != "" {
+		if err = chromedp.Run(ctx, chromedp.SendKeys(cnf.PasswordField, cnf.Password)); err != nil {
 			return nil, errors.Wrap(err, "fill the password field")
 		}
 	}
@@ -206,7 +183,7 @@ func Login(ctx context.Context, chromeURL string, cnf *LoginConfig) (*LoginData,
 	//
 	// Step 6. Submit the login form.
 	//
-	debugger.Debugln("Submit the login form")
+	logger.Debug("Submit the login form")
 	// We submit the login form by clicking on the submit button instead of calling chromedp.Submit()
 	// because of the tool emulates a user's actions.
 	wait := chrome.PageLoadWaiterFunc(ctx, false, 5*time.Second)
@@ -224,7 +201,7 @@ func Login(ctx context.Context, chromeURL string, cnf *LoginConfig) (*LoginData,
 	// 1. The OpenID Connect Provider redirects a user to the client's redirect URI with tokens in the URL's fragment.
 	// 2. The OpenID Connect Provider redirects a user to an OpenID Connect error's page.
 	// 3. The OpenID Connect Provider shows a user the login page that contains authentication error's message.
-	debugger.Debugln("Submiting is finished")
+	logger.Debug("Submiting is finished")
 	postLoginURL := navHistory.Last()
 	loginData, err := extractOIDCTokens(postLoginURL)
 	if err != nil {
@@ -234,7 +211,7 @@ func Login(ctx context.Context, chromeURL string, cnf *LoginConfig) (*LoginData,
 		return loginData, nil
 	}
 
-	debugger.Debugln("Failed to authenticate the user")
+	logger.Debug("Failed to authenticate the user")
 	if err = extractOIDCError(postLoginURL); err != nil {
 		return nil, err
 	}
