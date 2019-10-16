@@ -130,7 +130,7 @@ func Login(ctx context.Context, chromeURL string, cnf *LoginConfig) (*LoginData,
 	// Step 3. Navigate to the OpenID Connect Provider's login page.
 	//
 	loginStartURL := buildLoginURL(endpoint, cnf.ClientID, cnf.RedirectURI, cnf.Scopes)
-	logger.Debugf("Navigate to the login page %q\n", loginStartURL)
+	logger.Debugf("Navigate to the login page %q", loginStartURL)
 	if err = chrome.Navigate(ctx, loginStartURL); err != nil {
 		return nil, errors.Wrap(err, "navigate to the login page")
 	}
@@ -141,7 +141,7 @@ func Login(ctx context.Context, chromeURL string, cnf *LoginConfig) (*LoginData,
 	if err = chromedp.Run(ctx, chromedp.OuterHTML("html", &loginPageContent)); err != nil {
 		return nil, errors.Wrap(err, "get the login page's content")
 	}
-	logger.Debugf("The login page is loaded:\n\n%s\n\n", loginPageContent)
+	logger.Debugf("The login page is loaded:\n\n%s\n", loginPageContent)
 
 	//
 	// Step 4. Validate the login form.

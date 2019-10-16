@@ -56,7 +56,7 @@ func Logout(ctx context.Context, chromeURL string, cnf *LogoutConfig) error {
 	//
 	logoutURL := buildLogoutURL(endpoint, cnf.IDToken)
 	logger := log.LoggerFromContext(ctx).Sugar()
-	logger.Debugf("Navigate to the logout page %q\n", logoutURL)
+	logger.Debugf("Navigate to the logout page %q", logoutURL)
 	if err = chrome.Navigate(ctx, logoutURL); err != nil {
 		return errors.Wrap(err, "navigate to the logout page")
 	}
