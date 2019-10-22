@@ -10,5 +10,4 @@ require (
 	github.com/justinas/nosurf v0.0.0-20190416172904-05988550ea18
 	github.com/kelseyhightower/envconfig v1.4.0
 	go.uber.org/zap v1.10.0
-	golang.org/x/crypto v0.0.0-20190605123033-f99c8df09eb5
 )

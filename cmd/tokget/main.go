@@ -25,7 +25,6 @@ import (
 	"github.com/i-core/tokget/internal/web"
 	"github.com/kelseyhightower/envconfig"
 	"go.uber.org/zap"
-	"golang.org/x/crypto/ssh/terminal"
 )
 
 // version will be filled at compile time.
@@ -52,7 +51,6 @@ func main() {
 		verboseLogin  bool
 		verboseLogout bool
 		scopes        string
-		passwordStdin bool
 	)
 
 	loginCnf := &oidc.LoginConfig{}
@@ -67,7 +65,6 @@ func main() {
 	loginCmd.StringVar(&loginCnf.PasswordField, "password-field", defaultPasswordField, "a CSS selector of the password field on the login form")
 	loginCmd.StringVar(&loginCnf.SubmitButton, "submit-button", defaultSubmitButton, "a CSS selector of the submit button on the login form")
 	loginCmd.StringVar(&loginCnf.ErrorMessage, "error-message", defaultErrorMessage, "a CSS selector of an error message on the login form")
-	loginCmd.BoolVar(&passwordStdin, "pwd-stdin", false, "a user's password from stdin")
 	loginCmd.BoolVar(&verboseLogin, "v", false, "verbose mode")
 
 	logoutCnf := &oidc.LogoutConfig{}
@@ -151,18 +148,6 @@ func main() {
 			loginCmd.Parse(args[1:])
 
 			loginCnf.Scopes = strings.ReplaceAll(scopes, ",", " ")
-
-			if passwordStdin {
-				fmt.Println("Enter password: ")
-				b, err := terminal.ReadPassword(0)
-				if err != nil {
-					if errors.Cause(err) != context.Canceled {
-						fmt.Fprintf(os.Stderr, "Error: %s\n", err)
-					}
-					os.Exit(1)
-				}
-				loginCnf.Password = string(b)
-			}
 
 			ctx := withInterrupt(context.Background())
 			ctx = log.WithLogger(ctx, verboseLogin)

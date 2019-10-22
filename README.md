@@ -62,7 +62,7 @@ Run `tokget -h` to see a list of available commands.
 In terminal:
 
 ```bash
-tokget login -e https://openid-connect-provider -c <client's ID> -r <client's redirect URL> -s openid,profile,email -u username --pwd-std
+tokget login -e https://openid-connect-provider -c <client's ID> -r <client's redirect URL> -s openid,profile,email -u username -p password
 ```
 
 **Note** Google Chrome must be in `$PATH`.
@@ -71,7 +71,7 @@ Via Docker:
 
 
 ```bash
-docker run --name tokget --rm -it icoreru/tokget:v1.2.0 login -e https://openid-connect-provider -c <client ID> -r <client's redirect URL> -s openid,profile,email -u username -pwd-stdin
+docker run --name tokget --rm -it icoreru/tokget:v1.2.0 login -e https://openid-connect-provider -c <client ID> -r <client's redirect URL> -s openid,profile,email -u username -p password
 ```
 
 **Note** Image `icoreru/tokget` already contains Google Chrome so you don't need to run Google Chrome manually.
