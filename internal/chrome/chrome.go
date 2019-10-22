@@ -13,8 +13,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"os"
-	"os/signal"
 	"regexp"
 	"strconv"
 	"strings"
@@ -52,8 +50,6 @@ const (
 // In the case when the connection established with a new Chrome process
 // the function finishes the Chrome process.
 func ConnectWithContext(parent context.Context, chromeURL string, domains ...Domain) (context.Context, context.CancelFunc, error) {
-	parent = withInterrupt(parent)
-
 	var (
 		ctx    context.Context
 		cancel context.CancelFunc
@@ -62,12 +58,12 @@ func ConnectWithContext(parent context.Context, chromeURL string, domains ...Dom
 	//
 	// Establish a connection with a Chrome process.
 	//
-	debugger := log.DebuggerFromContext(parent)
+	logger := log.LoggerFromContext(parent).Sugar()
 	if chromeURL == "" {
-		debugger.Debugln("Start a new chrome process")
+		logger.Debug("Start a new chrome process")
 		ctx, cancel = chromedp.NewContext(parent)
 	} else {
-		debugger.Debugf("Connect to a chrome process at %q\n", chromeURL)
+		logger.Debugf("Connect to a chrome process at %q", chromeURL)
 		var err error
 		if ctx, cancel, err = connectToRemoteChrome(parent, chromeURL); err != nil {
 			return nil, nil, errors.Wrap(err, "connect to remote Chrome process")
@@ -89,7 +85,7 @@ func ConnectWithContext(parent context.Context, chromeURL string, domains ...Dom
 		if err := chromedp.Run(ctx, versionAction); err != nil {
 			return errors.Wrap(err, "get Chrome version")
 		}
-		debugger.Debugf("Chrome info:\n\tprotocolVersion: %s\n\tproduct:         %s\n", cdpVersion, product)
+		logger.Debugf("Chrome info:\n\tprotocolVersion: %s\n\tproduct:         %s", cdpVersion, product)
 		major, err := majorVersion(product)
 		if err != nil {
 			return errors.New("invalid Chrome version %q", product)
@@ -175,8 +171,8 @@ func connectToRemoteChrome(parent context.Context, chromeURL string) (context.Co
 		}
 		return nil, nil, errors.New("unexpected chrome config:\n%s", string(b))
 	}
-	debugger := log.DebuggerFromContext(parent)
-	debugger.Debugf("Remote Chrome Config:\n%s\n", string(b))
+	logger := log.LoggerFromContext(parent).Sugar()
+	logger.Debugf("Remote Chrome Config:\n%s", string(b))
 	debuggerURL := cnfs[0].DebuggerURL
 
 	// Connect to a remote Chrome process.
@@ -186,21 +182,6 @@ func connectToRemoteChrome(parent context.Context, chromeURL string) (context.Co
 		cancelChrome()
 		cancelRemoteAllocator()
 	}, nil
-}
-
-// withInterrupt returns a new context that will be canceled when the program receives an interruption signal (SIGINT).
-func withInterrupt(ctx context.Context) context.Context {
-	ctx, cancel := context.WithCancel(ctx)
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt)
-	go func() {
-		select {
-		case <-c:
-			cancel()
-		case <-ctx.Done():
-		}
-	}()
-	return ctx
 }
 
 // majorVersion extracts the major version from a Chrome's product name.
@@ -253,8 +234,8 @@ func NewNavHistory(ctx context.Context) (*NavHistory, error) {
 				rurl.Fragment = v.Request.URLFragment[1:]
 			}
 			navHistory.entries = append(navHistory.entries, rurl.String())
-			debugger := log.DebuggerFromContext(ctx)
-			debugger.Debugf("request %s %s\n", v.Request.Method, rurl.String())
+			logger := log.LoggerFromContext(ctx).Sugar()
+			logger.Debugf("request %s %s", v.Request.Method, rurl.String())
 		}
 		go func(interceptionID network.InterceptionID) {
 			if err := chromedp.Run(ctx, network.ContinueInterceptedRequest(interceptionID)); err != nil {
